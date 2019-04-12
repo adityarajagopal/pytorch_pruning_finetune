@@ -26,12 +26,17 @@ def setup_model(params) :
     else:
         model = models.__dict__[params.arch](num_classes=num_classes)
     
-    model = torch.nn.DataParallel(model).cuda()
+    gpu_list = [int(x) for x in params.gpu_id.split(',')]
+    model = torch.nn.DataParallel(model, gpu_list).cuda()
 
-    if params.resume == True or params.branch == True or params.evaluate == True : 
+    if params.resume == True or params.branch == True : 
         checkpoint = torch.load(params.pretrained)
         model.load_state_dict(checkpoint)
 
+    if params.evaluate == True : 
+        checkpoint = torch.load(params.pretrained)
+        model.load_state_dict(checkpoint['state_dict'])
+        
     torch.backends.cudnn.benchmark = True
     print('Total params: %.2fM' % (sum(p.numel() for p in model.parameters())/1000000.0))
     

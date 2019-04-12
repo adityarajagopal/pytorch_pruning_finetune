@@ -116,7 +116,7 @@ class Checkpointer(object) :
 
     def restore_state(self, params): 
         # get state to load from
-        if params.resume == True or params.branch == True or params.evaluate == True : 
+        if params.resume == True or params.branch == True : 
             file_to_load = params.pretrained.replace('model', 'state')        
             prev_state_dict = torch.load(file_to_load)
         
