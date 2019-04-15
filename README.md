@@ -47,7 +47,9 @@ checkpointing
 =============
 Defines a class that is instantiated in the **main** which holds the state during training as well as deals with checkpointing. 
 Whenever a new test is created, i.e. **Branch**, **Resume** and **Evaluate** are all False, the directory is set to **Checkpoint\_Path/Test\_Name/orig**. In here, after every epoch, two files are stored with the names *(epoch\_number)-model.pth.tar* and *(epoch\_number)-state.pth.tar*. 
+
 If a **Resume** is called, then whichever directory the *model.pth.tar* file was in, the new checkpoints are placed in that directory itself. The code checks to ensure that the checkpoint file passed to resume from is the last epoch that is stored in that directory. If you wish to resume from a different epoch, a **Branch** command needs to be used. 
+
 If a **Branch** is called, then at the same level as the **orig** directory, a new directory is created with name *(start_epoch_number)-(version)*. So if multiple different branches are created with the same start epoch, the version number is incremented by 1 each time. The checkpoint of the start epoch is copied from the **orig** directory into this new directory, and training is resumed from the following epoch. The relevant files in the old log file are also copied over, so the new logfile within this new directory is complete with history data and new data. 
 
 
