@@ -64,6 +64,7 @@ Densenet-161             22.35           6.20
 from .alexnet import *
 from .alexnet_profiling import *
 from .alexnet_pretrained import *
+from .alexnet_pruning import *
 from .vgg import *
 from .vgg_profiling import *
 from .resnet import *

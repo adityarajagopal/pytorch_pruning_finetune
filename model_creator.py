@@ -3,6 +3,11 @@ import torch.nn
 import torch.backends
 import torchvision 
 
+import pruning.methods as pruning
+
+import sys
+import os
+
 def setup_model(params) : 
     if params.dataset == 'cifar10' : 
         import models.cifar as models 
@@ -26,17 +31,24 @@ def setup_model(params) :
     else:
         model = models.__dict__[params.arch](num_classes=num_classes)
     
-    gpu_list = [int(x) for x in params.gpu_id.split(',')]
-    model = torch.nn.DataParallel(model, gpu_list).cuda()
+    model = torch.nn.DataParallel(model, params.gpu_list)
+    model = model.cuda()
 
-    if params.resume == True or params.branch == True : 
+    if params.resume == True or params.branch == True: 
         checkpoint = torch.load(params.pretrained)
-        model.load_state_dict(checkpoint)
+        model.load_state_dict(checkpoint, strict=False)
 
-    if params.evaluate == True : 
+    if params.evaluate == True: 
         checkpoint = torch.load(params.pretrained)
         model.load_state_dict(checkpoint['state_dict'])
-        
+
+    if params.finetune == True: 
+        checkpoint = torch.load(params.pretrained)
+        if 'state_dict' in checkpoint.keys() :
+            model.load_state_dict(checkpoint['state_dict'], strict=False)
+        else : 
+            model.load_state_dict(checkpoint, strict=False)
+    
     torch.backends.cudnn.benchmark = True
     print('Total params: %.2fM' % (sum(p.numel() for p in model.parameters())/1000000.0))
     

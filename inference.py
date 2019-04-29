@@ -25,4 +25,6 @@ def test_network(params, test_loader, model, criterion, optimiser) :
         top1.update(prec1) 
         top5.update(prec5)
         
-    print('Loss: {}, Top1: {}, Top5: {}'.format(losses.avg, top1.avg, top5.avg))
+    if params.evaluate == True : 
+        print('Loss: {}, Top1: {}, Top5: {}'.format(losses.avg, top1.avg, top5.avg))
+    return (losses.avg, top1.avg, top5.avg)

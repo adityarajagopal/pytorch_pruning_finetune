@@ -32,8 +32,7 @@ class Checkpointer(object) :
         self.logfile = os.path.join(new_dir, 'log.csv')
         
         f = open(self.logfile, 'w+')
-        # f.write('Epoch,\tLoss,\tTop1,\tTop5\n')
-        f.write('Epoch,\tLR,\tLoss,\tTop1,\tTop5\n')
+        f.write('Config,\tEpoch,\tLR,\tLoss_Train,\tTop1_Train,\tTop5_Train,\tLoss_Test,\tTop1_Test,\tTop5_Test\n')
         f.close()
 
     def __create_copy_log(self, new_root, old_root, prev_epoch) : 
@@ -95,7 +94,10 @@ class Checkpointer(object) :
             new_dir = os.path.join(params.checkpoint, params.test_name, 'orig')
             return new_dir
       
-    def save_checkpoint(self, model_dict, optimiser_dict, internal_state_dict) : 
+    def save_checkpoint(self, model_dict, optimiser_dict, internal_state_dict, save_cp=True, config='11') : 
+        if internal_state_dict['print_only'] == True :
+            return 
+        
         # create directory if not done already, this way empty directory is never created
         if self.created_dir == False : 
             self.__create_dir(self.root)
@@ -103,16 +105,17 @@ class Checkpointer(object) :
 
         # write to log file
         with open(self.logfile, 'a') as f :
-            line = str(internal_state_dict['curr_epoch']) + ',\t' + str(internal_state_dict['lr']) + '\t' + str(internal_state_dict['loss'].item()) + ',\t' + str(internal_state_dict['top1'].item()) + ',\t' + str(internal_state_dict['top5'].item()) + '\n'
+            line = config + ',\t' + str(internal_state_dict['curr_epoch']) + ',\t' + str(internal_state_dict['lr']) + ',\t' + str(internal_state_dict['train_loss'].item()) + ',\t' + str(internal_state_dict['train_top1'].item()) + ',\t' + str(internal_state_dict['train_top5'].item()) + ',\t' + str(internal_state_dict['test_loss'].item()) + ',\t' + str(internal_state_dict['test_top1'].item()) + ',\t' + str(internal_state_dict['test_top5'].item()) + '\n'
             f.write(line)
 
-        # create checkpoints to store
-        modelpath = os.path.join(self.root, str(internal_state_dict['curr_epoch']) + '-model' + '.pth.tar')
-        statepath = os.path.join(self.root, str(internal_state_dict['curr_epoch']) + '-state' + '.pth.tar')
+        if save_cp == True :
+            # create checkpoints to store
+            modelpath = os.path.join(self.root, str(internal_state_dict['curr_epoch']) + '-model' + '.pth.tar')
+            statepath = os.path.join(self.root, str(internal_state_dict['curr_epoch']) + '-state' + '.pth.tar')
 
-        # store checkpoints
-        torch.save(model_dict, modelpath) 
-        torch.save(internal_state_dict, statepath)
+            # store checkpoints
+            torch.save(model_dict, modelpath) 
+            torch.save(internal_state_dict, statepath)
 
     def restore_state(self, params): 
         # get state to load from
@@ -142,12 +145,13 @@ class Checkpointer(object) :
             subprocess.check_call(cmd, shell=True)
 
             params.start_epoch = prev_state_dict['curr_epoch'] + 1
+            # params.start_epoch = 0
 
         # if evaluate, use state as specified in config file
         elif params.evaluate == True : 
             pass 
 
-        # if all false, start from epoch 0 and use config file 
+        # if all false, start from epoch 0 and use config file --> finetune is True 
         else : 
             params.start_epoch = 0                            
 

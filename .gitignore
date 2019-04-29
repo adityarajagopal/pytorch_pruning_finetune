@@ -3,6 +3,7 @@
 data/
 logs/
 runs/
+img/
 __pycache__
 
 

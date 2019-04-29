@@ -9,6 +9,7 @@ import training
 import inference
 import utils
 from checkpointing import Checkpointer
+import pruning.utils as pruning_utils
 
 import tensorboardX as tbx
 
@@ -38,6 +39,9 @@ def main() :
     if use_cuda : 
         print('==> Using GPU %s' % params.gpu_id)
         os.environ['CUDA_VISIBLE_DEVICES'] = params.gpu_id
+        params.gpu_list = [int(x) for x in params.gpu_id.split(',')]
+        if len(params.gpu_list) == 1:
+            torch.cuda.set_device(params.gpu_list[0])
     else : 
         print('==> No CUDA GPUs found --> Using CPU')
 
@@ -50,32 +54,38 @@ def main() :
     if use_cuda : 
         torch.cuda.manual_seed_all(params.manual_seed)
 
-    # preprocess dataset
-    print('==> Setting up Input Dataset')
-    train_loader, test_loader = preproc.import_and_preprocess_dataset(params) 
-    
     # setup model 
     print('==> Setting up Model')
     model, criterion, optimiser = mc.setup_model(params)
     
+    # preprocess dataset
+    print('==> Setting up Input Dataset')
+    train_loader, test_loader = preproc.import_and_preprocess_dataset(params) 
+
     # setup tee printing so some prints can be written to a log file
     if (params.tee_printing != 'None') : 
         print('==> Tee Printing Enabled to logfile {}'.format(params.tee_printing))
         sys.stdout = utils.TeePrinting(params.tee_printing)
 
-    # setup tensorboardX and checkpointer  
-    tbx_writer = tbx.SummaryWriter(comment='test-1')
+    # setup tensorboardX   
+    params.tbx = tbx.SummaryWriter(comment='-prune_weights_2+_int_15_epochs_60_base_prune_20_' + '__'.join(params.sub_classes))
 
-    if params.evaluate == False : 
+    if params.finetune == True : 
+        # every 10 epochs, prune and then retrain 
+        print('==> Performing Finetuning')
+        training.finetune_network(params, checkpointer, train_loader, test_loader, model, criterion, optimiser) 
+        params.tbx.add_custom_scalars_multilinechart(params.prune_rate_by_layer, category='__'.join(params.sub_classes), title='prune rate for different layers across epochs')
+        
+    elif params.evaluate == False : 
         # train model 
         print('==> Performing Training')
-        training.train_network(params, tbx_writer, checkpointer, train_loader, test_loader, model, criterion, optimiser) 
+        training.train_network(params, checkpointer, train_loader, test_loader, model, criterion, optimiser) 
     else : 
         # perform inference only
         print('==> Performing Inference')
         inference.test_network(params, test_loader, model, criterion, optimiser)
 
-    tbx_writer.close()
+    params.tbx.close()
         
 main()
          
