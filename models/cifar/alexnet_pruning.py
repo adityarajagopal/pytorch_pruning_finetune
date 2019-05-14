@@ -46,12 +46,12 @@ class AlexNetPruning(nn.Module):
         return x
 
     def set_masks(self, masks):
-        self.conv1.set_mask(masks[0])
-        self.conv2.set_mask(masks[1])
-        self.conv3.set_mask(masks[2])
-        self.conv4.set_mask(masks[3])
-        self.conv5.set_mask(masks[4])
-        # self.linear.set_mask(masks[5])
+        # self.conv1.set_mask(masks[0])
+        # self.conv2.set_mask(masks[1])
+        # self.conv3.set_mask(masks[2])
+        # self.conv4.set_mask(masks[3])
+        # self.conv5.set_mask(masks[4])
+        self.linear.set_mask(masks[5])
 
 def alexnet_pruning(pretrained=False, **kwargs):
     r"""AlexNet model architecture from the

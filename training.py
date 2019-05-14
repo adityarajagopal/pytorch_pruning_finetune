@@ -72,21 +72,28 @@ def train_network(params, checkpointer, train_loader, test_loader, model, criter
         params.train_loss = losses.avg        
         params.train_top1 = top1.avg        
         params.train_top5 = top5.avg        
+            
+        params.test_loss, params.test_top1, params.test_top5 = inference.test_network(params, test_loader, model, criterion, optimiser)
+        checkpointer.save_checkpoint(model.state_dict(), optimiser.state_dict(), params.get_state())
+        print('{},\t{},\t{},\t{},\t{},\t{},\t{},\t{},\t{}'.format('00', epoch, params.lr, params.train_loss, params.train_top1, params.train_top5, params.test_loss, params.test_top1, params.test_top5))
+            
+        if params.tbx is not None:
+            params.tbx.add_scalar(params.dataset+'/top1', params.test_top1, params.curr_epoch)
 
-        if params.finetune == True : 
-            # get test loss of subset on new model
-            params.test_loss, params.test_top1, params.test_top5 = inference.test_network(params, test_loader['subset'], model, criterion, optimiser)
-            checkpointer.save_checkpoint(model.state_dict(), optimiser.state_dict(), params.get_state(), save_cp=True, config='11')
-            print('{},\t{},\t{},\t{},\t{},\t{},\t{},\t{},\t{}'.format('11', epoch, params.lr, params.train_loss, params.train_top1, params.train_top5, params.test_loss, params.test_top1, params.test_top5))
+        # if params.finetune == True : 
+        #     # get test loss of subset on new model
+        #     params.test_loss, params.test_top1, params.test_top5 = inference.test_network(params, test_loader['subset'], model, criterion, optimiser)
+        #     checkpointer.save_checkpoint(model.state_dict(), optimiser.state_dict(), params.get_state(), save_cp=True, config='11')
+        #     print('{},\t{},\t{},\t{},\t{},\t{},\t{},\t{},\t{}'.format('11', epoch, params.lr, params.train_loss, params.train_top1, params.train_top5, params.test_loss, params.test_top1, params.test_top5))
 
-            # get test loss of entire dataset on new model
-            params.test_loss, params.test_top1, params.test_top5 = inference.test_network(params, test_loader['orig'], model, criterion, optimiser)
-            checkpointer.save_checkpoint(model.state_dict(), optimiser.state_dict(), params.get_state(), save_cp=False, config='01')
-            print('{},\t{},\t{},\t{},\t{},\t{},\t{},\t{},\t{}'.format('01', epoch, params.lr, params.train_loss, params.train_top1, params.train_top5, params.test_loss, params.test_top1, params.test_top5))   
-        else : 
-            params.test_loss, params.test_top1, params.test_top5 = inference.test_network(params, test_loader, model, criterion, optimiser)
-            checkpointer.save_checkpoint(model.state_dict(), optimiser.state_dict(), params.get_state())
-            print('{},\t{},\t{},\t{},\t{},\t{},\t{},\t{},\t{}'.format('00', epoch, params.lr, params.train_loss, params.train_top1, params.train_top5, params.test_loss, params.test_top1, params.test_top5))
+        #     # get test loss of entire dataset on new model
+        #     params.test_loss, params.test_top1, params.test_top5 = inference.test_network(params, test_loader['orig'], model, criterion, optimiser)
+        #     checkpointer.save_checkpoint(model.state_dict(), optimiser.state_dict(), params.get_state(), save_cp=False, config='01')
+        #     print('{},\t{},\t{},\t{},\t{},\t{},\t{},\t{},\t{}'.format('01', epoch, params.lr, params.train_loss, params.train_top1, params.train_top5, params.test_loss, params.test_top1, params.test_top5))   
+        # else : 
+        #     params.test_loss, params.test_top1, params.test_top5 = inference.test_network(params, test_loader, model, criterion, optimiser)
+        #     checkpointer.save_checkpoint(model.state_dict(), optimiser.state_dict(), params.get_state())
+        #     print('{},\t{},\t{},\t{},\t{},\t{},\t{},\t{},\t{}'.format('00', epoch, params.lr, params.train_loss, params.train_top1, params.train_top5, params.test_loss, params.test_top1, params.test_top5))
 
 
 def finetune_network(params, checkpointer, train_loader, test_loader, model, criterion, optimiser) :  
@@ -129,13 +136,15 @@ def finetune_network(params, checkpointer, train_loader, test_loader, model, cri
             params.test_loss, params.test_top1, params.test_top5 = inference.test_network(params, test_loader['subset'], model, criterion, optimiser)
             checkpointer.save_checkpoint(model.state_dict(), optimiser.state_dict(), params.get_state(), save_cp=True, config='11')
             print('{},\t{},\t{},\t{},\t{},\t{},\t{},\t{},\t{}'.format('11', epoch, params.lr, params.train_loss, params.train_top1, params.train_top5, params.test_loss, params.test_top1, params.test_top5))
-            params.tbx.add_scalar('__'.join(params.sub_classes)+'/top1_subset_on_new_model', params.test_top1, params.curr_epoch)
+            if params.tbx is not None:
+                params.tbx.add_scalar('__'.join(params.sub_classes)+'/top1_subset_on_new_model', params.test_top1, params.curr_epoch)
             
             # get test loss of entire dataset on new model
             params.test_loss, params.test_top1, params.test_top5 = inference.test_network(params, test_loader['orig'], model, criterion, optimiser)
             checkpointer.save_checkpoint(model.state_dict(), optimiser.state_dict(), params.get_state(), save_cp=False, config='01')
             print('{},\t{},\t{},\t{},\t{},\t{},\t{},\t{},\t{}'.format('01', epoch, params.lr, params.train_loss, params.train_top1, params.train_top5, params.test_loss, params.test_top1, params.test_top5))   
-            params.tbx.add_scalar('__'.join(params.sub_classes)+'/top1_all_on_new_model', params.test_top1, params.curr_epoch)
+            if params.tbx is not None:
+                params.tbx.add_scalar('__'.join(params.sub_classes)+'/top1_all_on_new_model', params.test_top1, params.curr_epoch)
         
         else : 
             params.test_loss, params.test_top1, params.test_top5 = inference.test_network(params, test_loader, model, criterion, optimiser)

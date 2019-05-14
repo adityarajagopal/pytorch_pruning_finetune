@@ -1,14 +1,14 @@
 import numpy as np
+import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import sys
-
-import matplotlib.pyplot as plt
+from collections import Counter
 
 from pruning.utils import prune_rate, arg_nonzero_min
 
-def weight_prune(model, pruning_perc):
+def weight_prune(params, model, pruning_perc):
     '''
     Prune pruning_perc% weights globally (not layer-wise)
     arXiv: 1606.09274
@@ -21,11 +21,10 @@ def weight_prune(model, pruning_perc):
 
     # generate mask
     masks = []
-    this_layer_up = 2
     layer_count = 0
     for p in model.parameters():
         if len(p.data.size()) != 1:
-            if layer_count >= this_layer_up :
+            if layer_count >= params.this_layer_up :
                 pruned_inds = p.data.abs() > threshold
                 mask = pruned_inds.float()
             else :
@@ -58,7 +57,6 @@ def prune_one_filter(params, model, masks):
             # construct masks if there is not
             if NO_MASKS:
                 tmp = torch.tensor((), dtype=torch.float32)
-                # masks.append(np.ones(p_np.shape).astype('float32'))
                 masks.append(tmp.new_ones(p_np.shape))
 
             # find the scaled l2 norm for each filter this layer
@@ -78,18 +76,15 @@ def prune_one_filter(params, model, masks):
     values = np.array(values)
 
     # set mask corresponding to the filter to prune
-    # to_prune_layer_ind = np.argmin(values[:, 0])
-    this_layer_up = 2
-    to_prune_layer_ind = np.argmin(values[this_layer_up:, 0])
-    to_prune_layer_ind += this_layer_up
+    to_prune_layer_ind = np.argmin(values[params.this_layer_up:, 0])
+    to_prune_layer_ind += params.this_layer_up
     to_prune_filter_ind = int(values[to_prune_layer_ind, 1])
     masks[to_prune_layer_ind][to_prune_filter_ind] = 0.
 
-    # params.pruned_layers.append(to_prune_layer_ind)
-
-    # print('Prune filter #{} in layer #{}'.format(
-    #     to_prune_filter_ind, 
-    #     to_prune_layer_ind))
+    if to_prune_layer_ind in params.pruned_filters.keys(): 
+        params.pruned_filters[to_prune_layer_ind].append(to_prune_filter_ind)
+    else: 
+        params.pruned_filters[to_prune_layer_ind] = [to_prune_filter_ind]
 
     return masks
 
@@ -118,10 +113,32 @@ def prune_model(params, model) :
     elif params.prune_filters == True : 
         print('Creating Filter Pruning Mask')
         masks = filter_prune(params, model)
-        # pruned_layers = torch.tensor(params.pruned_layers, dtype=torch.int32)
-        # params.tbx.add_histogram(str(params.sub_classes)+'/pruned_layers', pruned_layers, params.curr_epoch, bins='auto')
+
+        # plot bar chart of filters per layer 
+        if params.tbx is not None: 
+            for layer, filters in params.pruned_filters.items():
+                plot_name = '__'.join(params.sub_classes) + '/pruned_filters_layer_' + str(layer)
+                pruned_filters = torch.tensor(filters, dtype=torch.int32)
+                params.tbx.add_histogram(plot_name, pruned_filters, params.curr_epoch, bins='auto')
 
     return model
+
+def plot_filter_barchart(params): 
+    for layer, filters in params.pruned_filters.items():
+        if layer not in params.plots.keys():
+            fig, ax = plt.subplots()
+            params.plots[layer] = (fig, ax)
+
+        plot_name = '__'.join(params.sub_classes) + '_pruned_filters_layer_' + str(layer) + '_epoch_' + str(params.curr_epoch)
+        filter_ids = np.arange(max(filters)+1)
+        filter_counts = Counter(filters) 
+        present_ids = filter_counts.keys()
+        ids_to_add = [x for x in filter_ids if x not in present_ids]
+        for x in ids_to_add:
+            filter_counts[x] = 0
+
+        params.plots[layer][1].bar(filter_counts.keys(), filter_counts.values())
+        params.plots[layer][0].savefig('img/' + plot_name)
 
 def plot_weight_mask(model, layer_count, mask):
     layer_names = ['conv1', 'conv2', 'conv3', 'conv4', 'conv5', 'linear']

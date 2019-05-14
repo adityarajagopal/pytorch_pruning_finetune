@@ -2,6 +2,7 @@ from __future__ import print_function
 
 import argparse
 import configparser as cp
+import copy 
 
 class Params() : 
     def __init__(self, config_file) : 
@@ -29,6 +30,7 @@ class Params() :
         self.lr_schedule = [self.__to_num(i) for i in config_file.get('training_hyperparameters', 'lr_schedule').split()]
         
         self.sub_classes = config_file.get('pruning_hyperparameters', 'sub_classes').split() 
+        self.this_layer_up = config_file.getint('pruning_hyperparameters', 'this_layer_up') 
         self.finetune = config_file.getboolean('pruning_hyperparameters', 'finetune')
         self.prune_weights = config_file.getboolean('pruning_hyperparameters', 'prune_weights')
         self.prune_filters = config_file.getboolean('pruning_hyperparameters', 'prune_filters')
@@ -36,6 +38,8 @@ class Params() :
 
         assert not (self.prune_weights == True and self.prune_filters == True), 'Cannot prune both weights and filters'
 
+        self.tbx_name = config_file.get('pytorch_parameters', 'tbx_name')
+        self.enable_tbx = config_file.getboolean('pytorch_parameters', 'enable_tbx')
         self.manual_seed = config_file.getint('pytorch_parameters', 'manual_seed')
         self.workers = config_file.getint('pytorch_parameters', 'data_loading_workers')
         self.gpu_id = config_file.get('pytorch_parameters', 'gpu_id')
@@ -52,7 +56,8 @@ class Params() :
         self.gpu_list = []
         self.device = 'cuda:0'
         self.tbx = None
-        self.pruned_layers = []
+        self.pruned_filters = {}
+        self.plots = {}
         self.prune_rate_by_layer = []
         
         self.start_epoch = 0 
@@ -65,7 +70,11 @@ class Params() :
         self.test_top5 = 1
 
     def get_state(self) : 
-        return self.__dict__
+        state = {}
+        for key, val in self.__dict__.items():
+            if key != 'tbx':
+                state[key] = val
+        return state
 
     def __to_num(self, x) : 
         try : 

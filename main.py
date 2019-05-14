@@ -68,13 +68,26 @@ def main() :
         sys.stdout = utils.TeePrinting(params.tee_printing)
 
     # setup tensorboardX   
-    params.tbx = tbx.SummaryWriter(comment='-prune_weights_2+_int_15_epochs_60_base_prune_20_' + '__'.join(params.sub_classes))
+    if params.enable_tbx == True:  
+        if params.prune_weights == True:
+            run_name = '-prune_weights_' + str(params.this_layer_up) + '+_int_15_epochs_' + str(params.epochs) + '_base_prune_' + str(params.pruning_perc) + '_' +'__'.join(params.sub_classes)
+        elif params.prune_filters == True:
+            run_name = '-prune_filters_' + str(params.this_layer_up) + '+_int_15_epochs_' + str(params.epochs) + '_base_prune_' + str(params.pruning_perc) + '_' +'__'.join(params.sub_classes)
+        elif params.finetune == True:
+            run_name = '-' + params.tbx_name + '_' + '__'.join(params.sub_classes)
+        else : 
+            run_name = '-' + params.tbx_name
+        
+        params.tbx = tbx.SummaryWriter(comment= run_name)
+    else : 
+        params.tbx = None
 
     if params.finetune == True : 
         # every 10 epochs, prune and then retrain 
         print('==> Performing Finetuning')
         training.finetune_network(params, checkpointer, train_loader, test_loader, model, criterion, optimiser) 
-        params.tbx.add_custom_scalars_multilinechart(params.prune_rate_by_layer, category='__'.join(params.sub_classes), title='prune rate for different layers across epochs')
+        if params.tbx is not None : 
+            params.tbx.add_custom_scalars_multilinechart(params.prune_rate_by_layer, category='__'.join(params.sub_classes), title='prune rate for different layers across epochs')
         
     elif params.evaluate == False : 
         # train model 
@@ -85,7 +98,8 @@ def main() :
         print('==> Performing Inference')
         inference.test_network(params, test_loader, model, criterion, optimiser)
 
-    params.tbx.close()
+    if params.tbx is not None:
+        params.tbx.close()
         
 main()
          

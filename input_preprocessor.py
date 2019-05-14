@@ -94,7 +94,8 @@ def import_and_preprocess_dataset(params) :
     elif dataset == 'cifar100' : 
         # data_loc = '/home/ar4414/multipres_training/organised/data'
         data_loader = torchvision.datasets.CIFAR100
-        if params.finetune == True : 
+        # if params.finetune == True : 
+        if  params.sub_classes != [] : 
             assert params.sub_classes != [], 'Cannot fine tune if subclasses not specified' 
             print('Generating subset of dataset with classes %s' % params.sub_classes)
             train_indices, test_indices = create_subclass_dataset(dataset, data_loc, params.sub_classes) 
@@ -120,6 +121,11 @@ def import_and_preprocess_dataset(params) :
             train_loader = torch.utils.data.DataLoader(train_set, batch_size=train_batch, num_workers=workers, sampler = torch.utils.data.sampler.SubsetRandomSampler(train_indices))
             test_loader['subset'] = torch.utils.data.DataLoader(test_set, batch_size=test_batch, num_workers=workers, sampler = torch.utils.data.sampler.SubsetRandomSampler(test_indices))
             test_loader['orig'] = torch.utils.data.DataLoader(test_set, batch_size=test_batch, num_workers=workers, shuffle=False)
+        
+        elif params.sub_classes != []:
+            train_loader = torch.utils.data.DataLoader(train_set, batch_size=train_batch, num_workers=workers, sampler = torch.utils.data.sampler.SubsetRandomSampler(train_indices))
+            test_loader = torch.utils.data.DataLoader(test_set, batch_size=test_batch, num_workers=workers, sampler = torch.utils.data.sampler.SubsetRandomSampler(test_indices))
+        
         else : 
             train_loader = torch.utils.data.DataLoader(train_set, batch_size=train_batch, shuffle=True, num_workers=workers)
             test_loader = torch.utils.data.DataLoader(test_set, batch_size=test_batch, shuffle=False, num_workers=workers)

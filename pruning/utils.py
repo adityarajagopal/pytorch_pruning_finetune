@@ -82,11 +82,15 @@ def prune_rate(params, model, verbose=True):
             nb_zero_param += zero_param_this_layer
 
             if verbose:
+                # log layer-wise pruning percentage to Tbx
                 scalar = '__'.join(params.sub_classes)+'/layer_'+str(layer_id)+'_prune_rate'
                 if scalar not in params.prune_rate_by_layer: 
                     params.prune_rate_by_layer.append(scalar)
-                params.tbx.add_scalar(scalar, torch.tensor((zero_param_this_layer/param_this_layer)), params.curr_epoch)
 
+                if params.tbx is not None:
+                    params.tbx.add_scalar(scalar, torch.tensor((zero_param_this_layer/param_this_layer)), params.curr_epoch)
+
+                # print layer-wise pruning percentage
                 print("Layer {} | {} layer | {:.2f}% parameters pruned" \
                     .format(
                         layer_id,
